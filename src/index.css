@@ -1,0 +1,366 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Plus Jakarta Sans", "DM Sans", system-ui, sans-serif;
+  --font-landing: "Poppins", "Plus Jakarta Sans", "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+}
+
+.landing-shell h1,
+.landing-shell h2,
+.landing-shell h3,
+.landing-shell h4,
+.landing-shell .font-landing,
+.workspace-shell h1,
+.workspace-shell h2,
+.workspace-shell h3,
+.workspace-shell h4,
+.workspace-shell .font-display {
+  font-family: var(--font-landing);
+}
+
+/* Modern iOS Glassmorphism Surfaces */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 4px 24px -8px rgba(15, 23, 42, 0.06);
+}
+
+.dark .glass-nav {
+  background: rgba(9, 17, 29, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.45);
+}
+
+.glass-sidebar {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(26px) saturate(185%);
+  -webkit-backdrop-filter: blur(26px) saturate(185%);
+  border-right: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    4px 0 28px -14px rgba(15, 23, 42, 0.1),
+    -1px 0 0 0 rgba(23, 181, 232, 0.08) inset;
+}
+
+.dark .glass-sidebar {
+  background: rgba(8, 16, 28, 0.74);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    8px 0 32px -12px rgba(0, 0, 0, 0.55),
+    -1px 0 0 0 rgba(44, 229, 155, 0.07) inset;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(24px) saturate(175%);
+  -webkit-backdrop-filter: blur(24px) saturate(175%);
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 18px 42px -18px rgba(15, 23, 42, 0.16),
+    0 1px 0 0 rgba(255, 255, 255, 0.92) inset,
+    0 0 0 1px rgba(23, 181, 232, 0.08);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 20px 46px -18px rgba(2, 6, 23, 0.7),
+    0 1px 0 0 rgba(255, 255, 255, 0.12) inset,
+    0 0 0 1px rgba(44, 229, 155, 0.08);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(28px) saturate(185%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%);
+  border: 1px solid rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 24px 60px -20px rgba(15, 23, 42, 0.2),
+    0 1px 0 0 rgba(255, 255, 255, 0.95) inset,
+    0 0 0 1px rgba(23, 181, 232, 0.1);
+}
+
+.dark .glass-panel {
+  background: rgba(11, 20, 35, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 28px 64px -20px rgba(2, 6, 23, 0.85),
+    0 1px 0 0 rgba(255, 255, 255, 0.14) inset,
+    0 0 0 1px rgba(44, 229, 155, 0.1);
+}
+
+.glass-card-hover {
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-4px);
+  border-color: rgba(23, 181, 232, 0.42);
+  box-shadow:
+    0 24px 48px -18px rgba(23, 181, 232, 0.22),
+    0 1px 0 0 rgba(255, 255, 255, 0.95) inset,
+    0 0 24px -6px rgba(44, 229, 155, 0.2);
+}
+
+.dark .glass-card-hover:hover {
+  border-color: rgba(44, 229, 155, 0.36);
+  box-shadow:
+    0 24px 52px -18px rgba(0, 0, 0, 0.78),
+    0 1px 0 0 rgba(255, 255, 255, 0.16) inset,
+    0 0 28px -8px rgba(23, 181, 232, 0.28);
+}
+
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.66);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+}
+
+.dark .glass-subtle {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: #17B5E8;
+  box-shadow: 0 0 0 3px rgba(23, 181, 232, 0.16);
+}
+
+.dark .glass-input {
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.dark .glass-input:focus {
+  background: rgba(15, 23, 42, 0.88);
+  border-color: #2CE59B;
+  box-shadow: 0 0 0 3px rgba(44, 229, 155, 0.16);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-view {
+  animation: fadeSlideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Scroll-triggered reveal */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+:root {
+  --login-grad-start: #0284C7;
+  --login-grad-mid: #17B5E8;
+  --login-grad-end: #0EA5A4;
+  --login-tosca: #2CE59B;
+  --login-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Error feedback: GPU-only horizontal damped shake */
+@keyframes authShake {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  18% {
+    transform: translate3d(-7px, 0, 0);
+  }
+  36% {
+    transform: translate3d(6px, 0, 0);
+  }
+  54% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  72% {
+    transform: translate3d(3px, 0, 0);
+  }
+  88% {
+    transform: translate3d(-1px, 0, 0);
+  }
+}
+
+.auth-card-shake {
+  animation: authShake 460ms var(--login-ease-out);
+  will-change: transform;
+}
+
+/* Staggered Dashboard Workspace Entrance (GPU transform + opacity only) */
+@keyframes wsSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translate3d(-18px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes wsSlideInDown {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes wsFadeRise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.ws-entering aside[aria-label="Navigasi utama"] {
+  animation: wsSlideInLeft 520ms var(--login-ease-out) both;
+}
+
+.ws-entering header {
+  animation: wsSlideInDown 480ms var(--login-ease-out) 70ms both;
+}
+
+.ws-entering main .animate-view > * {
+  animation: wsFadeRise 540ms var(--login-ease-out) both;
+}
+
+.ws-entering main .animate-view > *:nth-child(1) {
+  animation-delay: 110ms;
+}
+
+.ws-entering main .animate-view > *:nth-child(2) {
+  animation-delay: 175ms;
+}
+
+.ws-entering main .animate-view > *:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+.ws-entering main .animate-view > *:nth-child(4) {
+  animation-delay: 305ms;
+}
+
+.ws-entering main .animate-view > *:nth-child(5) {
+  animation-delay: 370ms;
+}
+
+/* View Transitions API cross-fade when browser supports document.startViewTransition */
+::view-transition-old(root) {
+  animation: vtFadeOut 280ms var(--login-ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: vtFadeIn 380ms var(--login-ease-out) both;
+}
+
+@keyframes vtFadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+}
+
+@keyframes vtFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-view,
+  .auth-card-shake,
+  .ws-entering aside[aria-label="Navigasi utama"],
+  .ws-entering header,
+  .ws-entering main .animate-view > * {
+    animation: none;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .glass-card-hover:hover {
+    transform: none;
+  }
+}

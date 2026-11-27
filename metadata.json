@@ -1,0 +1,6 @@
+{
+  "name": "PRFlow Workspace Pro",
+  "description": "Content Planner & PR Digital Archive — Workspace relasional 5 fase alur kerja humas, kalender detektor bentrok kru, kanban QC brand safety, monitoring sentimen, dan repositori aset digital.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
