@@ -46,6 +46,10 @@
   box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.45);
 }
 
+.landing-shell .glass-nav {
+  border-bottom: none;
+}
+
 .glass-sidebar {
   background: rgba(255, 255, 255, 0.76);
   backdrop-filter: blur(26px) saturate(185%);
@@ -343,13 +347,37 @@
   }
 }
 
+@keyframes avatarStatusPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.72;
+  }
+  70% {
+    transform: scale(2.15);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.15);
+    opacity: 0;
+  }
+}
+
+.avatar-pulse-ring {
+  animation: avatarStatusPulse 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-view,
   .auth-card-shake,
+  .avatar-pulse-ring,
   .ws-entering aside[aria-label="Navigasi utama"],
   .ws-entering header,
   .ws-entering main .animate-view > * {
     animation: none;
+  }
+  .avatar-pulse-ring {
+    opacity: 0;
   }
   ::view-transition-old(root),
   ::view-transition-new(root) {
@@ -364,3 +392,55 @@
     transform: none;
   }
 }
+
+/* Accessibility Menu: Narrator active highlight & High Contrast mode */
+.a11y-narrator-reading {
+  outline: 2.5px solid #17B5E8 !important;
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.dark .a11y-narrator-reading {
+  outline-color: #2CE59B !important;
+}
+
+.a11y-high-contrast {
+  filter: contrast(1.16) saturate(1.06);
+}
+
+.a11y-high-contrast a:focus-visible,
+.a11y-high-contrast button:focus-visible,
+.a11y-high-contrast input:focus-visible,
+.a11y-high-contrast select:focus-visible,
+.a11y-high-contrast textarea:focus-visible {
+  outline: 3px solid #0284C7 !important;
+  outline-offset: 2px;
+}
+
+.dark.a11y-high-contrast a:focus-visible,
+.dark.a11y-high-contrast button:focus-visible,
+.dark.a11y-high-contrast input:focus-visible,
+.dark.a11y-high-contrast select:focus-visible,
+.dark.a11y-high-contrast textarea:focus-visible {
+  outline-color: #2CE59B !important;
+}
+
+/* Workspace Compact Layout Density (.ws-compact) */
+.ws-compact main {
+  padding: 0.9rem 1rem;
+}
+
+.ws-compact main .animate-view {
+  row-gap: 1rem;
+}
+
+.ws-compact main .space-y-6 > :not(:first-child) {
+  margin-top: 1rem;
+}
+
+.ws-compact aside nav button {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+

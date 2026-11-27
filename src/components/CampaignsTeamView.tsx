@@ -1,11 +1,14 @@
 import React from 'react';
 import { FolderPlus, Trash2, UserPlus } from 'lucide-react';
-import { formatCurrencyID, getInitials } from '../lib/prflowLogic';
+import { formatCurrencyID } from '../lib/prflowLogic';
 import type { PRFlowDatabase, ScheduleConflict } from '../types/prflow';
+import { UserAvatar, type AvatarUserInfo } from './UserAvatar';
 
 interface CampaignsTeamViewProps {
   db: PRFlowDatabase;
   conflicts: ScheduleConflict[];
+  resolveAvatarInfo?: (user: { id: string; name: string; email?: string; color?: string }) => AvatarUserInfo;
+  nowMs?: number;
   onOpenCampaignModal: () => void;
   onOpenUserModal: () => void;
   onConfirmDeleteCampaign: (id: string, name: string) => void;
@@ -15,6 +18,8 @@ interface CampaignsTeamViewProps {
 export const CampaignsTeamView: React.FC<CampaignsTeamViewProps> = ({
   db,
   conflicts,
+  resolveAvatarInfo,
+  nowMs,
   onOpenCampaignModal,
   onOpenUserModal,
   onConfirmDeleteCampaign,
@@ -157,11 +162,16 @@ export const CampaignsTeamView: React.FC<CampaignsTeamViewProps> = ({
                   } flex items-start justify-between gap-3`}
                 >
                   <div className="flex items-start gap-3 min-w-0">
-                    <div
-                      className={`w-10 h-10 rounded-lg ${u.color} text-white font-bold text-xs flex items-center justify-center shrink-0`}
-                    >
-                      {getInitials(u.name)}
-                    </div>
+                    <UserAvatar
+                      user={
+                        resolveAvatarInfo
+                          ? resolveAvatarInfo(u)
+                          : { name: u.name, email: u.email, colorClass: u.color, isOnline: false }
+                      }
+                      size="md"
+                      showStatus
+                      nowMs={nowMs}
+                    />
                     <div className="min-w-0">
                       <div className="font-semibold text-sm text-slate-900 dark:text-white truncate">
                         {u.name}

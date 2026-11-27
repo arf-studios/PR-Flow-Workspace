@@ -1012,7 +1012,7 @@ export const ToastStack: React.FC<ToastStackProps> = ({ toasts, onDismiss }) => 
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-5 right-5 z-[70] flex flex-col gap-2 max-w-sm w-full pointer-events-none"
+      className="fixed bottom-20 right-5 z-[70] flex flex-col gap-2 max-w-sm w-full pointer-events-none"
     >
       {toasts.map((t) => (
         <div

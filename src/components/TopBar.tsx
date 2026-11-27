@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Bell, Menu, Moon, Plus, Search, Sun } from 'lucide-react';
+import { Bell, Menu, Moon, Plus, Search, Settings, Sun } from 'lucide-react';
 import type { Campaign, NotificationItem } from '../types/prflow';
+import { UserAvatar, type AvatarUserInfo } from './UserAvatar';
 
 interface TopBarProps {
   searchQuery: string;
@@ -10,6 +11,8 @@ interface TopBarProps {
   notifications: NotificationItem[];
   notifOpen: boolean;
   isDark: boolean;
+  selfAvatar?: AvatarUserInfo | null;
+  nowMs?: number;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   onSearchChange: (value: string) => void;
   onCampaignFilterChange: (campaignId: string) => void;
@@ -17,6 +20,9 @@ interface TopBarProps {
   onCloseNotif: () => void;
   onMarkAllRead: () => void;
   onToggleTheme: () => void;
+  onOpenSettings: () => void;
+  isSettingsActive?: boolean;
+  onOpenCrew?: () => void;
   onOpenNewContent: () => void;
   onOpenMobileSidebar: () => void;
 }
@@ -29,6 +35,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   notifications,
   notifOpen,
   isDark,
+  selfAvatar = null,
+  nowMs,
   searchInputRef,
   onSearchChange,
   onCampaignFilterChange,
@@ -36,6 +44,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   onCloseNotif,
   onMarkAllRead,
   onToggleTheme,
+  onOpenSettings,
+  isSettingsActive = false,
+  onOpenCrew,
   onOpenNewContent,
   onOpenMobileSidebar,
 }) => {
@@ -183,12 +194,39 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <button
           type="button"
+          onClick={onOpenSettings}
+          aria-label="Buka pengaturan workspace"
+          aria-current={isSettingsActive ? 'page' : undefined}
+          title="Pengaturan & About"
+          className={`p-2.5 rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17B5E8] ${
+            isSettingsActive
+              ? 'bg-[#17B5E8]/15 dark:bg-[#2CE59B]/15 text-[#0284C7] dark:text-[#2CE59B] border border-[#17B5E8]/40 dark:border-[#2CE59B]/35'
+              : 'glass-subtle text-slate-600 dark:text-slate-300 hover:bg-white/85 dark:hover:bg-white/10 hover:-translate-y-0.5'
+          }`}
+        >
+          <Settings className="w-4 h-4" aria-hidden="true" />
+        </button>
+
+        <button
+          type="button"
           onClick={onOpenNewContent}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#0284C7] via-[#17B5E8] to-[#0EA5A4] hover:brightness-105 text-white text-sm font-semibold shadow-lg shadow-[#17B5E8]/25 hover:-translate-y-0.5 transition-all whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17B5E8] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
         >
           <Plus className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline">Konten Baru</span>
         </button>
+
+        {selfAvatar && (
+          <button
+            type="button"
+            onClick={onOpenCrew}
+            aria-label={`Status profil ${selfAvatar.name}: ${selfAvatar.isOnline ? 'Online' : 'Offline'}. Buka Anggota Kru`}
+            title={`${selfAvatar.name} (${selfAvatar.isOnline ? 'Online' : 'Offline'}) — Klik untuk buka Anggota Kru`}
+            className="p-0.5 rounded-full hover:scale-105 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17B5E8] shrink-0"
+          >
+            <UserAvatar user={selfAvatar} size="sm" showStatus nowMs={nowMs} />
+          </button>
+        )}
       </div>
     </header>
   );

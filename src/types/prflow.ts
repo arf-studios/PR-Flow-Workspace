@@ -24,6 +24,7 @@ export type NavView =
   | 'phase3'
   | 'phase4'
   | 'phase5'
+  | 'crew'
   | 'campaigns'
   | 'assets'
   | 'archive'

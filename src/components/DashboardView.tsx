@@ -6,12 +6,12 @@ import {
   FolderKanban,
   Kanban,
   Paperclip,
+  Settings,
   ShieldAlert,
 } from 'lucide-react';
 import {
   computeDashboardMetrics,
   formatDateID,
-  getInitials,
   getPesoAccentClass,
 } from '../lib/prflowLogic';
 import type {
@@ -22,6 +22,7 @@ import type {
   ScheduleConflict,
 } from '../types/prflow';
 import { PHASE_META } from '../types/prflow';
+import { UserAvatar, type AvatarUserInfo } from './UserAvatar';
 
 interface DashboardViewProps {
   db: PRFlowDatabase;
@@ -33,6 +34,10 @@ interface DashboardViewProps {
   onOpenNewContent: () => void;
   onOpenNewCampaign: () => void;
   onOpenNewUser: () => void;
+  showOnboardingGuide?: boolean;
+  autoConflictAlerts?: boolean;
+  resolveAvatarInfo?: (user: { id: string; name: string; email?: string; color?: string }) => AvatarUserInfo;
+  nowMs?: number;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -45,9 +50,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNewContent,
   onOpenNewCampaign,
   onOpenNewUser,
+  showOnboardingGuide = true,
+  autoConflictAlerts = true,
+  resolveAvatarInfo,
+  nowMs,
 }) => {
   const needsOnboarding =
-    db.contents.length === 0 || db.campaigns.length === 0 || db.users.length === 0;
+    showOnboardingGuide &&
+    (db.contents.length === 0 || db.campaigns.length === 0 || db.users.length === 0);
+  const visibleConflicts = autoConflictAlerts ? conflicts : [];
   const metrics = computeDashboardMetrics(filteredContents);
   const campaignMap = new Map(db.campaigns.map((c) => [c.id, c]));
   const userMap = new Map(db.users.map((u) => [u.id, u]));
@@ -118,21 +129,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <FolderKanban className="w-3.5 h-3.5 text-[#0284C7] dark:text-[#38BDF8]" aria-hidden="true" />
             Aset ({db.assets.length})
           </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('settings')}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full glass-card text-slate-700 dark:text-slate-200 hover:border-[#17B5E8]/50 hover:-translate-y-0.5 transition-all whitespace-nowrap"
+          >
+            <Settings className="w-3.5 h-3.5 text-[#0284C7] dark:text-[#2CE59B]" aria-hidden="true" />
+            Pengaturan
+          </button>
         </div>
       </div>
 
       {/* Priority Alerts */}
-      {(conflicts.length > 0 || metrics.crisisItems.length > 0) && (
+      {(visibleConflicts.length > 0 || metrics.crisisItems.length > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {conflicts.length > 0 && (
+          {visibleConflicts.length > 0 && (
             <div className="p-4 sm:p-5 rounded-[24px] bg-[#F37021]/10 dark:bg-[#F37021]/15 backdrop-blur-xl border border-[#F37021]/30 dark:border-[#F37021]/35 shadow-lg shadow-[#F37021]/10 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-[#C2410C] dark:text-[#FF8A47] shrink-0 mt-0.5" aria-hidden="true" />
               <div className="flex-1 min-w-0">
                 <h2 className="text-sm font-bold text-amber-950 dark:text-amber-200">
-                  Detektor Bentrok: {conflicts.length} Jadwal Kru Bertabrakan
+                  Detektor Bentrok: {visibleConflicts.length} Jadwal Kru Bertabrakan
                 </h2>
                 <p className="text-xs text-amber-900/85 dark:text-amber-200/85 mt-1 leading-relaxed">
-                  {conflicts.map((c, idx) => (
+                  {visibleConflicts.map((c, idx) => (
                     <React.Fragment key={`${c.date}-${c.user.id}`}>
                       {idx > 0 && ' · '}
                       <strong className="font-semibold">{c.user.name}</strong> pada{' '}
@@ -465,13 +484,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           ) : (
                             <>
                               {crew.slice(0, 3).map((u) => (
-                                <span
+                                <UserAvatar
                                   key={u.id}
-                                  title={`${u.name} (${u.role})`}
-                                  className={`w-7 h-7 rounded-full ${u.color} text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white/90 dark:ring-slate-900`}
-                                >
-                                  {getInitials(u.name)}
-                                </span>
+                                  user={
+                                    resolveAvatarInfo
+                                      ? resolveAvatarInfo(u)
+                                      : { name: u.name, email: u.email, colorClass: u.color, isOnline: false }
+                                  }
+                                  size="xs"
+                                  showStatus
+                                  nowMs={nowMs}
+                                  className="ring-2 ring-white/90 dark:ring-slate-900 rounded-full"
+                                />
                               ))}
                               {crew.length > 3 && (
                                 <span className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold flex items-center justify-center ring-2 ring-white/90 dark:ring-slate-900">

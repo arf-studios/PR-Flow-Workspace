@@ -1,0 +1,416 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private authenticated user profile containing personal contact details and privacy preference.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "agencyRole": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "hideOnlineStatus": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "name",
+        "email",
+        "photoURL",
+        "agencyRole",
+        "hideOnlineStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserCrewMembershipIndex": {
+      "title": "UserCrewMembershipIndex",
+      "description": "Per-user membership index enabling secure real-time listing of crews a user belongs to.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "crewId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "crewName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "crewRole": {
+          "type": "string",
+          "enum": ["owner", "admin", "member"]
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "crewId",
+        "crewName",
+        "crewRole",
+        "joinedAt",
+        "updatedAt"
+      ]
+    },
+    "UserPresence": {
+      "title": "UserPresence",
+      "description": "Real-time presence state for a single authenticated user aggregated across active browser sessions.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "hideOnlineStatus": {
+          "type": "boolean"
+        },
+        "lastHeartbeatMs": {
+          "type": "number"
+        },
+        "activeSessionCount": {
+          "type": "number"
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "online",
+        "hideOnlineStatus",
+        "lastHeartbeatMs",
+        "activeSessionCount",
+        "lastSeen",
+        "updatedAt"
+      ]
+    },
+    "PresenceSession": {
+      "title": "PresenceSession",
+      "description": "Individual browser tab or device session heartbeat record used for multi-tab presence aggregation.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "deviceLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "lastHeartbeatMs": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "sessionId",
+        "deviceLabel",
+        "lastHeartbeatMs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Crew": {
+      "title": "Crew",
+      "description": "PR agency crew or production team grouping members with role-based access control.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "inviteCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^[A-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "inviteCode",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CrewMember": {
+      "title": "CrewMember",
+      "description": "Authoritative crew membership record synchronized in real time across all crew members.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "crewId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "crewName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "crewRole": {
+          "type": "string",
+          "enum": ["owner", "admin", "member"]
+        },
+        "agencyRole": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "addedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "inviteCode": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "crewId",
+        "crewName",
+        "name",
+        "email",
+        "photoURL",
+        "crewRole",
+        "agencyRole",
+        "addedBy",
+        "inviteCode",
+        "joinedAt",
+        "updatedAt"
+      ]
+    },
+    "CrewInvite": {
+      "title": "CrewInvite",
+      "description": "Lookup-by-code invite ticket enabling verified users with the invite code to join a crew.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^[A-Z0-9_\\-]+$"
+        },
+        "crewId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "crewName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "code",
+        "crewId",
+        "crewName",
+        "createdBy",
+        "active",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Server-managed global administrator allowlist record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        }
+      },
+      "required": ["uid"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profiles isolated to the profile owner or global admin."
+    },
+    "/users/{uid}/crewMemberships/{crewId}": {
+      "schema": { "$ref": "#/entities/UserCrewMembershipIndex" },
+      "description": "Per-user index of crew memberships synchronized atomically with /crews/{crewId}/members/{uid}."
+    },
+    "/presence/{uid}": {
+      "schema": { "$ref": "#/entities/UserPresence" },
+      "description": "Real-time presence status document writable only by the owning user."
+    },
+    "/presence/{uid}/sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/PresenceSession" },
+      "description": "Per-tab/device heartbeat sessions owned exclusively by the signed-in user."
+    },
+    "/crews/{crewId}": {
+      "schema": { "$ref": "#/entities/Crew" },
+      "description": "PR agency crew metadata accessible only to active members of that crew."
+    },
+    "/crews/{crewId}/members/{memberId}": {
+      "schema": { "$ref": "#/entities/CrewMember" },
+      "description": "Master Source of Truth subcollection for crew membership, roles, and instant access revocation."
+    },
+    "/crewInvites/{code}": {
+      "schema": { "$ref": "#/entities/CrewInvite" },
+      "description": "Crew join code tickets allowing verified teammates with the code to join a crew."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Read-only allowlist of global workspace administrators."
+    }
+  }
+}

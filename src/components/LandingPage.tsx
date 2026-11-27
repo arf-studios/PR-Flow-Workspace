@@ -958,7 +958,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {mobileMenuOpen && (
           <nav
             aria-label="Navigasi seluler"
-            className="md:hidden border-t border-white/60 dark:border-white/10 bg-white/85 dark:bg-slate-950/90 backdrop-blur-2xl px-4 py-3 space-y-1"
+            className="md:hidden bg-white/85 dark:bg-slate-950/90 backdrop-blur-2xl px-4 py-3 space-y-1"
           >
             {navItems.map((item) => (
               <button
@@ -1045,7 +1045,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
 
                   {/* Grounded Glass Capability Strip */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-slate-900/10 dark:border-white/10">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
                     <div className="p-4 rounded-3xl glass-subtle">
                       <div className="font-landing text-xl sm:text-2xl font-bold tabular-nums text-[#0284C7] dark:text-[#38BDF8] whitespace-nowrap">
                         5 Fase
@@ -1140,7 +1140,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <section
               id="features-workflow"
               aria-labelledby="features-workflow-heading"
-              className="relative py-16 lg:py-24 border-t border-white/60 dark:border-white/10"
+              className="relative py-16 lg:py-24"
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
                 <RevealBlock className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -1734,7 +1734,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </main>
 
       {/* Quiet Frosted Footer */}
-      <footer className="relative z-10 glass-subtle border-t border-white/65 dark:border-white/10">
+      <footer className="relative z-10 glass-subtle !border-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-5">
           <div>
             <div className="font-landing font-bold text-sm text-slate-900 dark:text-white">

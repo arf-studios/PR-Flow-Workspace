@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityMenu } from './components/AccessibilityMenu';
 import { ArchiveView } from './components/ArchiveView';
 import { AssetsView } from './components/AssetsView';
 import { CampaignsTeamView } from './components/CampaignsTeamView';
 import { ContentDetailDrawer } from './components/ContentDetailDrawer';
 import { DashboardView } from './components/DashboardView';
 import { LandingPage } from './components/LandingPage';
+import { MemberList } from './components/MemberList';
 import {
   AssetModal,
   CampaignModal,
@@ -22,6 +24,9 @@ import { Phase5View } from './components/Phase5View';
 import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import type { AvatarUserInfo } from './components/UserAvatar';
+import { useCrewMembers } from './hooks/useCrewMembers';
+import { usePresence } from './hooks/usePresence';
 import {
   AUTH_SESSION_KEY,
   authenticateAgencyAccount,
@@ -31,7 +36,19 @@ import {
   registerAgencyAccount,
   THEME_STORAGE_KEY,
 } from './lib/prflowLogic';
+import {
+  enrichCrewMembersWithPresence,
+  isEffectivelyOnline,
+  summarizeCrewPresence,
+} from './lib/presenceLogic';
 import { runWithViewTransition } from './lib/loginTransition';
+import {
+  DEFAULT_WORKSPACE_PREFERENCES,
+  WORKSPACE_PREFS_STORAGE_KEY,
+  resolveInitialWorkspaceView,
+  sanitizeWorkspacePreferences,
+  type WorkspacePreferences,
+} from './lib/workspaceSettings';
 import { usePRFlowStore } from './store/usePRFlowStore';
 import type {
   AgencySession,
@@ -93,6 +110,16 @@ function loadInitialSession(): AgencySession | null {
   return null;
 }
 
+function loadWorkspacePreferences(): WorkspacePreferences {
+  try {
+    const raw = localStorage.getItem(WORKSPACE_PREFS_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_WORKSPACE_PREFERENCES };
+    return sanitizeWorkspacePreferences(JSON.parse(raw));
+  } catch {
+    return { ...DEFAULT_WORKSPACE_PREFERENCES };
+  }
+}
+
 export default function App() {
   const store = usePRFlowStore();
   const [registeredAccounts, setRegisteredAccounts] =
@@ -101,8 +128,13 @@ export default function App() {
   const [surfaceView, setSurfaceView] = useState<'landing' | 'workspace'>(() =>
     loadInitialSession() ? 'workspace' : 'landing'
   );
+  const [workspacePrefs, setWorkspacePrefs] = useState<WorkspacePreferences>(
+    loadWorkspacePreferences
+  );
 
-  const [currentView, setCurrentView] = useState<NavView>('dashboard');
+  const [currentView, setCurrentView] = useState<NavView>(() =>
+    resolveInitialWorkspaceView(loadWorkspacePreferences())
+  );
   const [workspaceJustEntered, setWorkspaceJustEntered] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [campaignFilter, setCampaignFilter] = useState('ALL');
@@ -131,6 +163,93 @@ export default function App() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Real-time Crew Membership Sync & Presence (Firebase Firestore + multi-tab heartbeat)
+  const crewSync = useCrewMembers({
+    agencyRoleFallback: session?.role || 'PR Account Director',
+    hideOnlineStatus: workspacePrefs.hideOnlineStatus,
+    onNotify: store.pushToast,
+  });
+
+  const localUserKey = session?.email ? `local_${session.email.toLowerCase()}` : null;
+
+  const presence = usePresence({
+    cloudUid: crewSync.cloudUser?.uid || null,
+    cloudEmailVerified: Boolean(crewSync.cloudUser?.emailVerified),
+    localUserKey,
+    trackedUids: crewSync.trackedUids,
+    hideOnlineStatus: workspacePrefs.hideOnlineStatus,
+  });
+
+  const selfAvatar = useMemo<AvatarUserInfo | null>(() => {
+    if (!session) return null;
+    return {
+      name: crewSync.cloudUser?.displayName || session.name,
+      email: crewSync.cloudUser?.email || session.email,
+      photoURL: crewSync.cloudUser?.photoURL || null,
+      isOnline: presence.selfOnline,
+      lastSeenMs: presence.nowMs,
+    };
+  }, [session, crewSync.cloudUser, presence.selfOnline, presence.nowMs]);
+
+  const onlineCrewCount = useMemo(() => {
+    if (crewSync.cloudUser) {
+      const enriched = enrichCrewMembersWithPresence(
+        crewSync.members,
+        presence.presenceMap,
+        presence.nowMs
+      );
+      return summarizeCrewPresence(enriched).onlineUnique;
+    }
+    return presence.selfOnline ? 1 : 0;
+  }, [crewSync.cloudUser, crewSync.members, presence.presenceMap, presence.nowMs, presence.selfOnline]);
+
+  const resolveAvatarInfo = useCallback(
+    (user: { id: string; name: string; email?: string; color?: string }): AvatarUserInfo => {
+      const normalizedEmail = user.email?.trim().toLowerCase();
+      const matchedCloud = normalizedEmail
+        ? crewSync.members.find((m) => m.email.toLowerCase() === normalizedEmail)
+        : crewSync.members.find(
+            (m) => m.uid === user.id || m.name.toLowerCase() === user.name.toLowerCase()
+          );
+
+      if (matchedCloud) {
+        const rec = presence.presenceMap[matchedCloud.uid];
+        return {
+          name: matchedCloud.name,
+          email: matchedCloud.email,
+          photoURL: matchedCloud.photoURL || null,
+          colorClass: user.color,
+          isOnline: isEffectivelyOnline(rec, presence.nowMs),
+          lastSeenMs: rec?.lastSeenMs ?? null,
+        };
+      }
+
+      if (
+        session &&
+        ((normalizedEmail && normalizedEmail === session.email.toLowerCase()) ||
+          user.name.toLowerCase() === session.name.toLowerCase())
+      ) {
+        return {
+          name: user.name,
+          email: user.email || session.email,
+          photoURL: crewSync.cloudUser?.photoURL || null,
+          colorClass: user.color,
+          isOnline: presence.selfOnline,
+          lastSeenMs: presence.nowMs,
+        };
+      }
+
+      return {
+        name: user.name,
+        email: user.email,
+        colorClass: user.color,
+        isOnline: false,
+        lastSeenMs: null,
+      };
+    },
+    [crewSync.members, crewSync.cloudUser, presence.presenceMap, presence.nowMs, presence.selfOnline, session]
+  );
+
   // Sync Tailwind v4 dark class on <html>
   useEffect(() => {
     const root = document.documentElement;
@@ -151,6 +270,15 @@ export default function App() {
       // Ignore storage error
     }
   }, [registeredAccounts]);
+
+  // Persist workspace user preferences
+  useEffect(() => {
+    try {
+      localStorage.setItem(WORKSPACE_PREFS_STORAGE_KEY, JSON.stringify(workspacePrefs));
+    } catch {
+      // Ignore storage error
+    }
+  }, [workspacePrefs]);
 
   // Global keyboard shortcuts (Ctrl/Cmd+K & Escape)
   useEffect(() => {
@@ -282,7 +410,7 @@ export default function App() {
 
     runWithViewTransition(() => {
       setSession(validatedSession);
-      setCurrentView('dashboard');
+      setCurrentView(resolveInitialWorkspaceView(workspacePrefs));
       setSurfaceView('workspace');
       setWorkspaceJustEntered(true);
     }, reducedMotion);
@@ -301,8 +429,13 @@ export default function App() {
   const handleRequestLogout = () => {
     openConfirm(
       'Keluar dari Workspace?',
-      'Sesi akun agensi Anda akan diakhiri dan Anda akan kembali ke Halaman Depan. Data workspace lokal Anda tetap aman tersimpan di browser.',
+      'Sesi akun agensi Anda akan diakhiri, status Anda ditandai Offline, dan Anda akan kembali ke Halaman Depan. Data workspace lokal Anda tetap aman tersimpan di browser.',
       () => {
+        if (crewSync.cloudUser) {
+          void crewSync.signOutCloudGoogle(presence.markOfflineBeforeLogout);
+        } else {
+          void presence.markOfflineBeforeLogout();
+        }
         setSession(null);
         setSurfaceView('landing');
         setDrawerContentId(null);
@@ -318,7 +451,7 @@ export default function App() {
         store.pushToast(
           'info',
           'Sesi Diakhiri',
-          'Anda telah keluar dari PRFlow Workspace.'
+          'Anda telah keluar dari PRFlow Workspace dan status presence ditandai Offline.'
         );
       },
       'Ya, Keluar'
@@ -413,26 +546,28 @@ export default function App() {
         <div
           className={`workspace-shell relative flex h-screen overflow-hidden bg-gradient-to-br from-[#9EC7DA] via-[#B1CEE0] to-[#C6D0DC] dark:from-[#040B14] dark:via-[#071422] dark:to-[#0C1320] text-slate-900 dark:text-slate-100 ${
             workspaceJustEntered ? 'ws-entering' : ''
-          }`}
+          } ${workspacePrefs.density === 'compact' ? 'ws-compact' : ''}`}
         >
           {/* Subtle Ambient Brand Color Blobs (Tosca, Cyan, Warm Orange) matching Landing Page */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 overflow-hidden z-0"
-          >
+          {workspacePrefs.ambientBlobs && (
             <div
-              className="absolute -top-28 -left-20 w-[440px] h-[440px] rounded-full blur-[115px] opacity-38 dark:opacity-18"
-              style={{ background: 'radial-gradient(circle, #2CE59B 0%, rgba(44,229,155,0) 70%)' }}
-            />
-            <div
-              className="absolute top-[16%] -right-24 w-[520px] h-[520px] rounded-full blur-[125px] opacity-38 dark:opacity-20"
-              style={{ background: 'radial-gradient(circle, #17B5E8 0%, rgba(23,181,232,0) 70%)' }}
-            />
-            <div
-              className="absolute -bottom-32 left-[28%] w-[480px] h-[480px] rounded-full blur-[130px] opacity-30 dark:opacity-14"
-              style={{ background: 'radial-gradient(circle, #F37021 0%, rgba(243,112,33,0) 70%)' }}
-            />
-          </div>
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden z-0"
+            >
+              <div
+                className="absolute -top-28 -left-20 w-[440px] h-[440px] rounded-full blur-[115px] opacity-38 dark:opacity-18"
+                style={{ background: 'radial-gradient(circle, #2CE59B 0%, rgba(44,229,155,0) 70%)' }}
+              />
+              <div
+                className="absolute top-[16%] -right-24 w-[520px] h-[520px] rounded-full blur-[125px] opacity-38 dark:opacity-20"
+                style={{ background: 'radial-gradient(circle, #17B5E8 0%, rgba(23,181,232,0) 70%)' }}
+              />
+              <div
+                className="absolute -bottom-32 left-[28%] w-[480px] h-[480px] rounded-full blur-[130px] opacity-30 dark:opacity-14"
+                style={{ background: 'radial-gradient(circle, #F37021 0%, rgba(243,112,33,0) 70%)' }}
+              />
+            </div>
+          )}
 
           <Sidebar
             db={store.db}
@@ -440,6 +575,10 @@ export default function App() {
             currentView={currentView}
             mobileOpen={mobileSidebarOpen}
             lastSavedTime={store.lastSavedTime}
+            showPhaseCounters={workspacePrefs.showPhaseCounters}
+            selfAvatar={selfAvatar}
+            onlineCrewCount={onlineCrewCount}
+            nowMs={presence.nowMs}
             onNavigate={handleNavigate}
             onCloseMobile={() => setMobileSidebarOpen(false)}
             onExportCSV={store.exportCSV}
@@ -457,6 +596,8 @@ export default function App() {
               notifications={store.db.notifications}
               notifOpen={notifOpen}
               isDark={isDark}
+              selfAvatar={selfAvatar}
+              nowMs={presence.nowMs}
               searchInputRef={searchInputRef}
               onSearchChange={setSearchQuery}
               onCampaignFilterChange={setCampaignFilter}
@@ -464,6 +605,9 @@ export default function App() {
               onCloseNotif={() => setNotifOpen(false)}
               onMarkAllRead={store.markAllNotificationsRead}
               onToggleTheme={() => setIsDark((prev) => !prev)}
+              onOpenSettings={() => handleNavigate('settings')}
+              isSettingsActive={currentView === 'settings'}
+              onOpenCrew={() => handleNavigate('crew')}
               onOpenNewContent={() => handleOpenNewContent(1)}
               onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
             />
@@ -476,6 +620,10 @@ export default function App() {
                     filteredContents={filteredContents}
                     conflicts={conflicts}
                     conflictedContentIds={conflictedContentIds}
+                    showOnboardingGuide={workspacePrefs.showOnboardingGuide}
+                    autoConflictAlerts={workspacePrefs.autoConflictAlerts}
+                    resolveAvatarInfo={resolveAvatarInfo}
+                    nowMs={presence.nowMs}
                     onNavigate={handleNavigate}
                     onOpenDrawer={handleOpenDrawer}
                     onOpenNewContent={() => handleOpenNewContent(1)}
@@ -558,10 +706,60 @@ export default function App() {
                   />
                 )}
 
+                {currentView === 'crew' && (
+                  <MemberList
+                    session={session}
+                    localUsers={store.db.users}
+                    cloudUser={crewSync.cloudUser}
+                    signingIn={crewSync.signingIn}
+                    loadingCrews={crewSync.loadingCrews}
+                    connectionState={presence.connectionState}
+                    crews={crewSync.crews}
+                    members={crewSync.members}
+                    presenceMap={presence.presenceMap}
+                    nowMs={presence.nowMs}
+                    hideOnlineStatus={workspacePrefs.hideOnlineStatus}
+                    revokedNotices={crewSync.revokedNotices}
+                    onDismissRevokedNotice={crewSync.dismissRevokedNotice}
+                    onSignInGoogle={crewSync.signInCloudGoogle}
+                    onSignOutGoogle={() =>
+                      crewSync.signOutCloudGoogle(presence.markOfflineBeforeLogout)
+                    }
+                    onCreateCrew={crewSync.createCrew}
+                    onJoinCrewByCode={crewSync.joinCrewByCode}
+                    onAddCrewMember={crewSync.addCrewMember}
+                    onUpdateMemberRole={crewSync.updateMemberRole}
+                    onConfirmRemoveMember={(member) =>
+                      openConfirm(
+                        'Hapus Anggota dari Kru?',
+                        `${member.name} (${member.email}) akan dihapus dari kru "${member.crewName}" dan kehilangan akses ke kru ini secara langsung.`,
+                        () => {
+                          void crewSync.removeCrewMember(member.crewId, member.uid);
+                          setConfirmState((p) => ({ ...p, open: false }));
+                        },
+                        'Ya, Hapus Anggota'
+                      )
+                    }
+                    onConfirmDeleteLocalUser={(id, name) =>
+                      openConfirm(
+                        'Hapus Anggota Tim?',
+                        `${name} akan dihapus dari direktori tim serta seluruh penugasan jadwal take.`,
+                        () => {
+                          store.deleteUser(id);
+                          setConfirmState((p) => ({ ...p, open: false }));
+                        }
+                      )
+                    }
+                    onOpenLocalUserModal={() => setUserModalOpen(true)}
+                  />
+                )}
+
                 {currentView === 'campaigns' && (
                   <CampaignsTeamView
                     db={store.db}
                     conflicts={conflicts}
+                    resolveAvatarInfo={resolveAvatarInfo}
+                    nowMs={presence.nowMs}
                     onOpenCampaignModal={() => setCampaignModalOpen(true)}
                     onOpenUserModal={() => setUserModalOpen(true)}
                     onConfirmDeleteCampaign={(id, name) =>
@@ -607,7 +805,28 @@ export default function App() {
 
                 {currentView === 'settings' && (
                   <SettingsView
+                    session={session}
+                    isDark={isDark}
+                    preferences={workspacePrefs}
                     integrations={store.db.integrations}
+                    stats={{
+                      campaigns: store.db.campaigns.length,
+                      users: store.db.users.length,
+                      contents: store.db.contents.length,
+                      assets: store.db.assets.length,
+                    }}
+                    onSetTheme={setIsDark}
+                    onUpdatePreferences={(patch) =>
+                      setWorkspacePrefs((prev) => ({ ...prev, ...patch }))
+                    }
+                    onResetPreferences={() => {
+                      setWorkspacePrefs({ ...DEFAULT_WORKSPACE_PREFERENCES });
+                      store.pushToast(
+                        'info',
+                        'Preferensi Direset',
+                        'Pengaturan tampilan & alur kerja dikembalikan ke bawaan.'
+                      );
+                    }}
                     onSaveIntegrations={store.updateIntegrations}
                     onTestWebhook={store.testWebhook}
                     onExportJSON={store.exportJSON}
@@ -638,6 +857,8 @@ export default function App() {
             db={store.db}
             contentId={drawerContentId}
             initialTab={drawerInitialTab}
+            resolveAvatarInfo={resolveAvatarInfo}
+            nowMs={presence.nowMs}
             onClose={() => setDrawerContentId(null)}
             onSaveDraft={handleSaveDrawerDraft}
             onAdvancePhase={store.advancePhase}
@@ -717,7 +938,11 @@ export default function App() {
         onConfirm={confirmState.onConfirm}
       />
 
-      <ToastStack toasts={store.toasts} onDismiss={store.dismissToast} />
+      <AccessibilityMenu isDark={isDark} onSetTheme={setIsDark} />
+
+      {workspacePrefs.toastNotifications && (
+        <ToastStack toasts={store.toasts} onDismiss={store.dismissToast} />
+      )}
     </>
   );
 }

@@ -13,12 +13,13 @@ import {
   Layers,
   LayoutDashboard,
   LogOut,
-  PlugZap,
   Radio,
+  Settings,
+  Users,
   X,
 } from 'lucide-react';
-import { getInitials } from '../lib/prflowLogic';
 import type { AgencySession, NavView, PRFlowDatabase } from '../types/prflow';
+import { UserAvatar, type AvatarUserInfo } from './UserAvatar';
 
 interface SidebarProps {
   db: PRFlowDatabase;
@@ -26,6 +27,10 @@ interface SidebarProps {
   currentView: NavView;
   mobileOpen: boolean;
   lastSavedTime: string;
+  showPhaseCounters?: boolean;
+  selfAvatar?: AvatarUserInfo | null;
+  onlineCrewCount?: number;
+  nowMs?: number;
   onNavigate: (view: NavView) => void;
   onCloseMobile: () => void;
   onExportCSV: () => void;
@@ -40,6 +45,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentView,
   mobileOpen,
   lastSavedTime,
+  showPhaseCounters = true,
+  selfAvatar = null,
+  onlineCrewCount = 0,
+  nowMs,
   onNavigate,
   onCloseMobile,
   onExportCSV,
@@ -130,9 +139,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Compass className="w-4 h-4 text-[#0284C7] dark:text-[#38BDF8] shrink-0" aria-hidden="true" />
               <span className="truncate">1. Riset &amp; PESO</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {phaseCounts[0]}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {phaseCounts[0]}
+              </span>
+            )}
           </button>
 
           <button
@@ -144,9 +155,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <CalendarDays className="w-4 h-4 text-[#059669] dark:text-[#2CE59B] shrink-0" aria-hidden="true" />
               <span className="truncate">2. Planner &amp; Kalender</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {phaseCounts[1]}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {phaseCounts[1]}
+              </span>
+            )}
           </button>
 
           <button
@@ -158,9 +171,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Clapperboard className="w-4 h-4 text-[#C2410C] dark:text-[#FF8A47] shrink-0" aria-hidden="true" />
               <span className="truncate">3. Produksi &amp; QC</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {phaseCounts[2]}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {phaseCounts[2]}
+              </span>
+            )}
           </button>
 
           <button
@@ -172,9 +187,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Radio className="w-4 h-4 text-[#0369A1] dark:text-[#38BDF8] shrink-0" aria-hidden="true" />
               <span className="truncate">4. Distribusi &amp; Monitor</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {phaseCounts[3]}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {phaseCounts[3]}
+              </span>
+            )}
           </button>
 
           <button
@@ -186,14 +203,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <BarChart3 className="w-4 h-4 text-[#047857] dark:text-[#34D399] shrink-0" aria-hidden="true" />
               <span className="truncate">5. Evaluasi &amp; Krisis</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {phaseCounts[4]}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {phaseCounts[4]}
+              </span>
+            )}
           </button>
 
           <div className="px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wide text-slate-500/85 dark:text-slate-400">
             Manajemen &amp; Repositori
           </div>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('crew')}
+            className={navClass('crew')}
+          >
+            <span className="flex items-center gap-2.5 min-w-0">
+              <Users className="w-4 h-4 text-[#059669] dark:text-[#2CE59B] shrink-0" aria-hidden="true" />
+              <span className="truncate">Anggota Kru</span>
+            </span>
+            {showPhaseCounters && (
+              <span
+                title={`${onlineCrewCount} anggota online`}
+                className="inline-flex items-center gap-1 text-[11px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 shrink-0"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                {onlineCrewCount}
+              </span>
+            )}
+          </button>
 
           <button
             type="button"
@@ -204,9 +243,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Briefcase className="w-4 h-4 text-[#0284C7] dark:text-[#38BDF8] shrink-0" aria-hidden="true" />
               <span className="truncate">Kampanye &amp; Tim Kru</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {db.campaigns.length}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {db.campaigns.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -218,9 +259,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <FolderKanban className="w-4 h-4 text-[#059669] dark:text-[#2CE59B] shrink-0" aria-hidden="true" />
               <span className="truncate">Aset Digital (DAM)</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {db.assets.length}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {db.assets.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -232,9 +275,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Archive className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" aria-hidden="true" />
               <span className="truncate">Arsip Pembelajaran</span>
             </span>
-            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-              {db.archives.length}
-            </span>
+            {showPhaseCounters && (
+              <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                {db.archives.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -243,8 +288,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={navClass('settings')}
           >
             <span className="flex items-center gap-2.5 min-w-0">
-              <PlugZap className="w-4 h-4 text-[#C2410C] dark:text-[#FF8A47] shrink-0" aria-hidden="true" />
-              <span className="truncate">Integrasi &amp; Backup</span>
+              <Settings className="w-4 h-4 text-[#0284C7] dark:text-[#2CE59B] shrink-0" aria-hidden="true" />
+              <span className="truncate">Pengaturan &amp; About</span>
             </span>
           </button>
         </nav>
@@ -252,12 +297,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {session && (
           <div className="mx-3 mb-2 p-3 rounded-2xl glass-subtle space-y-2 shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#0284C7] via-[#17B5E8] to-[#2CE59B] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-sm shadow-[#17B5E8]/25">
-                {getInitials(session.name)}
-              </div>
+              <UserAvatar
+                user={
+                  selfAvatar || {
+                    name: session.name,
+                    email: session.email,
+                    isOnline: true,
+                    lastSeenMs: nowMs,
+                  }
+                }
+                size="sm"
+                showStatus
+                nowMs={nowMs}
+              />
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                  {session.name}
+                  {selfAvatar?.name || session.name}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                   {session.role}

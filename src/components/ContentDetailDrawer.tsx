@@ -13,9 +13,9 @@ import {
 import {
   buildGoogleCalendarUrl,
   buildGoogleMapsUrl,
-  getInitials,
   getPesoAccentClass,
 } from '../lib/prflowLogic';
+import { UserAvatar, type AvatarUserInfo } from './UserAvatar';
 import type {
   ContentItem,
   FunnelStage,
@@ -49,6 +49,8 @@ interface ContentDetailDrawerProps {
   onMarkGcalSynced: (contentId: string) => void;
   onDownloadICS: (contentId: string) => void;
   onGenerateDriveFolders: (contentId: string) => void;
+  resolveAvatarInfo?: (user: { id: string; name: string; email?: string; color?: string }) => AvatarUserInfo;
+  nowMs?: number;
 }
 
 export const ContentDetailDrawer: React.FC<ContentDetailDrawerProps> = ({
@@ -66,6 +68,8 @@ export const ContentDetailDrawer: React.FC<ContentDetailDrawerProps> = ({
   onMarkGcalSynced,
   onDownloadICS,
   onGenerateDriveFolders,
+  resolveAvatarInfo,
+  nowMs,
 }) => {
   const sourceItem = contentId ? db.contents.find((c) => c.id === contentId) || null : null;
   const [activeTab, setActiveTab] = useState<number>(initialTab);
@@ -636,11 +640,16 @@ export const ContentDetailDrawer: React.FC<ContentDetailDrawerProps> = ({
                             onChange={() => toggleCrewId(u.id)}
                             className="w-4 h-4 accent-indigo-600 rounded"
                           />
-                          <span
-                            className={`w-6 h-6 rounded-full ${u.color} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}
-                          >
-                            {getInitials(u.name)}
-                          </span>
+                          <UserAvatar
+                            user={
+                              resolveAvatarInfo
+                                ? resolveAvatarInfo(u)
+                                : { name: u.name, email: u.email, colorClass: u.color, isOnline: false }
+                            }
+                            size="xs"
+                            showStatus
+                            nowMs={nowMs}
+                          />
                           <span className="min-w-0">
                             <span className="block font-semibold text-slate-800 dark:text-slate-100 truncate">
                               {u.name}
@@ -883,12 +892,24 @@ export const ContentDetailDrawer: React.FC<ContentDetailDrawerProps> = ({
                   {draft.production.revisions.map((r, idx) => (
                     <div
                       key={`${r.date}-${idx}`}
-                      className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900 text-xs"
+                      className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900 text-xs flex items-start gap-2.5"
                     >
-                      <div className="font-semibold text-rose-700 dark:text-rose-300">
-                        {r.by} · {r.date}
+                      <UserAvatar
+                        user={
+                          resolveAvatarInfo
+                            ? resolveAvatarInfo({ id: r.by, name: r.by })
+                            : { name: r.by, isOnline: false }
+                        }
+                        size="xs"
+                        showStatus
+                        nowMs={nowMs}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-rose-700 dark:text-rose-300">
+                          {r.by} · {r.date}
+                        </div>
+                        <div className="mt-0.5 text-slate-700 dark:text-slate-300">{r.note}</div>
                       </div>
-                      <div className="mt-0.5 text-slate-700 dark:text-slate-300">{r.note}</div>
                     </div>
                   ))}
                 </div>

@@ -1,0 +1,509 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // Hardened Global Helpers
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'abd.farisy1976@gmail.com'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidInviteCode(code) {
+      return code is string && code.size() >= 4 && code.size() <= 24 && code.matches('^[A-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidEmail(val) {
+      return val is string && val.size() >= 3 && val.size() <= 160 && val.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+    }
+
+    function isCrewMember(crewId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/crews/$(crewId)/members/$(request.auth.uid));
+    }
+
+    function isCrewAdmin(crewId) {
+      return isCrewMember(crewId) &&
+        get(/databases/$(database)/documents/crews/$(crewId)/members/$(request.auth.uid)).data.crewRole in ['owner', 'admin'];
+    }
+
+    function hasActiveInviteForCrew(code, crewId) {
+      return isValidInviteCode(code) &&
+        exists(/databases/$(database)/documents/crewInvites/$(code)) &&
+        get(/databases/$(database)/documents/crewInvites/$(code)).data.active == true &&
+        get(/databases/$(database)/documents/crewInvites/$(code)).data.crewId == crewId;
+    }
+
+    // =========================================================================
+    // Validation Blueprints (Synchronized with firebase-blueprint.json)
+    // =========================================================================
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'name', 'email', 'photoURL', 'agencyRole',
+          'hideOnlineStatus', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'name', 'email', 'photoURL', 'agencyRole',
+          'hideOnlineStatus', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.uid == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        isValidEmail(data.email) &&
+        data.photoURL is string && data.photoURL.size() <= 500 &&
+        data.agencyRole is string && data.agencyRole.size() >= 1 && data.agencyRole.size() <= 60 &&
+        data.hideOnlineStatus is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCrewMembershipIndex(data) {
+      return data.keys().hasAll([
+          'uid', 'crewId', 'crewName', 'crewRole', 'joinedAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'crewId', 'crewName', 'crewRole', 'joinedAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        isValidId(data.crewId) &&
+        data.crewName is string && data.crewName.size() >= 1 && data.crewName.size() <= 80 &&
+        data.crewRole in ['owner', 'admin', 'member'] &&
+        data.joinedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserPresence(data) {
+      return data.keys().hasAll([
+          'uid', 'online', 'hideOnlineStatus', 'lastHeartbeatMs',
+          'activeSessionCount', 'lastSeen', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'online', 'hideOnlineStatus', 'lastHeartbeatMs',
+          'activeSessionCount', 'lastSeen', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.uid == request.auth.uid &&
+        data.online is bool &&
+        data.hideOnlineStatus is bool &&
+        data.lastHeartbeatMs is number && data.lastHeartbeatMs >= 0 &&
+        data.activeSessionCount is number && data.activeSessionCount >= 0 && data.activeSessionCount <= 25 &&
+        data.lastSeen is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPresenceSession(data) {
+      return data.keys().hasAll([
+          'uid', 'sessionId', 'deviceLabel', 'lastHeartbeatMs', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'sessionId', 'deviceLabel', 'lastHeartbeatMs', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.uid == request.auth.uid &&
+        isValidId(data.sessionId) &&
+        data.deviceLabel is string && data.deviceLabel.size() >= 1 && data.deviceLabel.size() <= 80 &&
+        data.lastHeartbeatMs is number && data.lastHeartbeatMs >= 0 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCrew(data) {
+      return data.keys().hasAll([
+          'id', 'name', 'description', 'inviteCode', 'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'name', 'description', 'inviteCode', 'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        data.description is string && data.description.size() <= 240 &&
+        isValidInviteCode(data.inviteCode) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCrewMember(data) {
+      return data.keys().hasAll([
+          'uid', 'crewId', 'crewName', 'name', 'email', 'photoURL',
+          'crewRole', 'agencyRole', 'addedBy', 'inviteCode', 'joinedAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'crewId', 'crewName', 'name', 'email', 'photoURL',
+          'crewRole', 'agencyRole', 'addedBy', 'inviteCode', 'joinedAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        isValidId(data.crewId) &&
+        data.crewName is string && data.crewName.size() >= 1 && data.crewName.size() <= 80 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        isValidEmail(data.email) &&
+        data.photoURL is string && data.photoURL.size() <= 500 &&
+        data.crewRole in ['owner', 'admin', 'member'] &&
+        data.agencyRole is string && data.agencyRole.size() >= 1 && data.agencyRole.size() <= 60 &&
+        isValidId(data.addedBy) &&
+        data.inviteCode is string && data.inviteCode.size() <= 24 &&
+        data.joinedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCrewInvite(data) {
+      return data.keys().hasAll([
+          'code', 'crewId', 'crewName', 'createdBy', 'active', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'code', 'crewId', 'crewName', 'createdBy', 'active', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidInviteCode(data.code) &&
+        isValidId(data.crewId) &&
+        data.crewName is string && data.crewName.size() >= 1 && data.crewName.size() <= 80 &&
+        isValidId(data.createdBy) &&
+        data.active is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // Collection Rules
+    // =========================================================================
+
+    // 1. Admin Allowlist (Read self or admin, client writes forbidden)
+    match /admins/{uid} {
+      allow get: if isSignedIn() && isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    // 2. Private User Profiles (Strict PII Isolation)
+    match /users/{uid} {
+      allow get: if isSignedIn() && isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if false;
+
+      allow create: if isVerified() &&
+        isValidId(uid) &&
+        isOwner(uid) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerified() &&
+        isValidId(uid) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            isOwner(uid) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'email', 'photoURL', 'agencyRole', 'hideOnlineStatus', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+
+      // 2b. Per-User Crew Membership Index (Secure List Queries without get())
+      match /crewMemberships/{crewId} {
+        allow get: if isSignedIn() && isValidId(uid) && isValidId(crewId) && (isOwner(uid) || isAdmin());
+        allow list: if isSignedIn() && request.auth.uid == uid && existing().uid == request.auth.uid;
+
+        allow create: if isVerified() &&
+          isValidId(uid) &&
+          isValidId(crewId) &&
+          isValidCrewMembershipIndex(incoming()) &&
+          incoming().uid == uid &&
+          incoming().crewId == crewId &&
+          incoming().joinedAt == request.time &&
+          incoming().updatedAt == request.time &&
+          existsAfter(/databases/$(database)/documents/crews/$(crewId)/members/$(uid)) && (
+            isAdmin() ||
+            isCrewAdmin(crewId) ||
+            (
+              isOwner(uid) &&
+              incoming().crewRole == 'owner' &&
+              getAfter(/databases/$(database)/documents/crews/$(crewId)).data.ownerUid == request.auth.uid
+            ) ||
+            (
+              isOwner(uid) &&
+              incoming().crewRole == 'member' &&
+              getAfter(/databases/$(database)/documents/crews/$(crewId)/members/$(uid)).data.crewRole == 'member'
+            )
+          );
+
+        allow update: if isVerified() &&
+          isValidId(uid) &&
+          isValidId(crewId) &&
+          isValidCrewMembershipIndex(incoming()) &&
+          incoming().uid == existing().uid &&
+          incoming().crewId == existing().crewId &&
+          incoming().joinedAt == existing().joinedAt &&
+          incoming().updatedAt == request.time && (
+            isAdmin() ||
+            (
+              isCrewAdmin(crewId) &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'crewName', 'crewRole', 'updatedAt'
+              ])
+            )
+          );
+
+        allow delete: if isVerified() &&
+          isValidId(uid) &&
+          isValidId(crewId) && (
+            isAdmin() ||
+            isCrewAdmin(crewId) ||
+            isOwner(uid)
+          );
+      }
+    }
+
+    // 3. Real-Time User Presence (Zero PII, Self-Only Writes)
+    match /presence/{uid} {
+      allow get: if isSignedIn() && isValidId(uid);
+      allow list: if false;
+
+      allow create: if isVerified() &&
+        isValidId(uid) &&
+        isOwner(uid) &&
+        isValidUserPresence(incoming()) &&
+        incoming().uid == uid &&
+        incoming().lastSeen == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerified() &&
+        isValidId(uid) &&
+        isValidUserPresence(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            isOwner(uid) &&
+            incoming().lastSeen == request.time &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'online', 'hideOnlineStatus', 'lastHeartbeatMs',
+              'activeSessionCount', 'lastSeen', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+
+      // 3b. Multi-Tab Active Sessions (Owner-Only)
+      match /sessions/{sessionId} {
+        allow get: if isSignedIn() && isValidId(uid) && isValidId(sessionId) && isOwner(uid);
+        allow list: if isSignedIn() && request.auth.uid == uid && existing().uid == request.auth.uid;
+
+        allow create: if isVerified() &&
+          isValidId(uid) &&
+          isValidId(sessionId) &&
+          isOwner(uid) &&
+          isValidPresenceSession(incoming()) &&
+          incoming().uid == uid &&
+          incoming().sessionId == sessionId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+
+        allow update: if isVerified() &&
+          isValidId(uid) &&
+          isValidId(sessionId) &&
+          isOwner(uid) &&
+          isValidPresenceSession(incoming()) &&
+          incoming().uid == existing().uid &&
+          incoming().sessionId == existing().sessionId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'deviceLabel', 'lastHeartbeatMs', 'updatedAt'
+          ]);
+
+        allow delete: if isVerified() && isValidId(uid) && isValidId(sessionId) && isOwner(uid);
+      }
+    }
+
+    // 4. Crew Invite Tickets (Get by exact code only, no listing/enumeration)
+    match /crewInvites/{code} {
+      allow get: if isSignedIn() && isValidInviteCode(code);
+      allow list: if false;
+
+      allow create: if isVerified() &&
+        isValidInviteCode(code) &&
+        isValidCrewInvite(incoming()) &&
+        incoming().code == code &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          isCrewAdmin(incoming().crewId) ||
+          getAfter(/databases/$(database)/documents/crews/$(incoming().crewId)).data.ownerUid == request.auth.uid
+        );
+
+      allow update: if isVerified() &&
+        isValidInviteCode(code) &&
+        isValidCrewInvite(incoming()) &&
+        incoming().code == existing().code &&
+        incoming().crewId == existing().crewId &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            isCrewAdmin(existing().crewId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'crewName', 'active', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isVerified() && isValidInviteCode(code) && (
+        isAdmin() ||
+        isCrewAdmin(existing().crewId)
+      );
+    }
+
+    // 5. Crews & Authoritative Crew Membership (Master Gate + Instant Revocation)
+    match /crews/{crewId} {
+      allow get: if isSignedIn() && isValidId(crewId) && (
+        isCrewMember(crewId) ||
+        existing().ownerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && existing().ownerUid == request.auth.uid;
+
+      allow create: if isVerified() &&
+        isValidId(crewId) &&
+        isValidCrew(incoming()) &&
+        incoming().id == crewId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        existsAfter(/databases/$(database)/documents/crews/$(crewId)/members/$(request.auth.uid));
+
+      allow update: if isVerified() &&
+        isValidId(crewId) &&
+        isValidCrew(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            isCrewAdmin(crewId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'description', 'inviteCode', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isVerified() && isValidId(crewId) && (
+        existing().ownerUid == request.auth.uid ||
+        isAdmin()
+      );
+
+      // 5b. Crew Members Subcollection (Master Source of Truth)
+      match /members/{memberId} {
+        allow get: if isSignedIn() && isValidId(crewId) && isValidId(memberId) && (
+          isCrewMember(crewId) ||
+          isAdmin()
+        );
+        allow list: if isSignedIn() && existing().crewId == crewId && (
+          isCrewMember(crewId) ||
+          isAdmin()
+        );
+
+        allow create: if isVerified() &&
+          isValidId(crewId) &&
+          isValidId(memberId) &&
+          isValidCrewMember(incoming()) &&
+          incoming().crewId == crewId &&
+          incoming().uid == memberId &&
+          incoming().addedBy == request.auth.uid &&
+          incoming().joinedAt == request.time &&
+          incoming().updatedAt == request.time && (
+            isAdmin() ||
+            (
+              isCrewAdmin(crewId) &&
+              incoming().crewRole in ['admin', 'member']
+            ) ||
+            (
+              memberId == request.auth.uid &&
+              incoming().crewRole == 'owner' &&
+              getAfter(/databases/$(database)/documents/crews/$(crewId)).data.ownerUid == request.auth.uid
+            ) ||
+            (
+              memberId == request.auth.uid &&
+              incoming().crewRole == 'member' &&
+              hasActiveInviteForCrew(incoming().inviteCode, crewId)
+            )
+          );
+
+        allow update: if isVerified() &&
+          isValidId(crewId) &&
+          isValidId(memberId) &&
+          isValidCrewMember(incoming()) &&
+          incoming().uid == existing().uid &&
+          incoming().crewId == existing().crewId &&
+          incoming().addedBy == existing().addedBy &&
+          incoming().inviteCode == existing().inviteCode &&
+          incoming().joinedAt == existing().joinedAt &&
+          incoming().updatedAt == request.time && (
+            isAdmin() ||
+            (
+              // Tier 1: Crew Owner/Admin managing member roles & details (cannot demote owner)
+              isCrewAdmin(crewId) &&
+              existing().crewRole != 'owner' &&
+              incoming().crewRole in ['admin', 'member'] &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'crewRole', 'agencyRole', 'name', 'email', 'photoURL', 'crewName', 'updatedAt'
+              ])
+            ) ||
+            (
+              // Tier 2: Member syncing their own display profile (cannot change crewRole)
+              isOwner(memberId) &&
+              incoming().crewRole == existing().crewRole &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'name', 'photoURL', 'agencyRole', 'updatedAt'
+              ])
+            )
+          );
+
+        allow delete: if isVerified() && isValidId(crewId) && isValidId(memberId) && (
+          isAdmin() ||
+          (isCrewAdmin(crewId) && existing().crewRole != 'owner') ||
+          (isOwner(memberId) && existing().crewRole != 'owner')
+        );
+      }
+    }
+  }
+}
